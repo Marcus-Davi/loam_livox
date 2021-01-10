@@ -39,7 +39,7 @@
 
 #include <cmath>
 #include <nav_msgs/Odometry.h>
-#include <opencv/cv.h>
+#include <opencv2/opencv.hpp>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/point_cloud.h>
