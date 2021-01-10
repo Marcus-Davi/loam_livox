@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(loam_livox)
 
+set (CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_CXX_FLAGS "-std=c++14")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
@@ -50,5 +51,8 @@ target_link_libraries(livox_laserMapping ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${
 
 add_executable(read_camera source/read_camera.cpp)
 target_link_libraries(read_camera ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${CERES_LIBRARIES} ${OpenCV_LIBS})
+
+add_executable(cloud_saver source/cloud_saver.cpp)
+target_link_libraries(cloud_saver ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 
