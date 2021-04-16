@@ -52,7 +52,7 @@ target_link_libraries(livox_laserMapping ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${
 add_executable(read_camera source/read_camera.cpp)
 target_link_libraries(read_camera ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${CERES_LIBRARIES} ${OpenCV_LIBS})
 
-add_executable(cloud_saver source/cloud_saver.cpp)
-target_link_libraries(cloud_saver ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+add_executable(pcd_saver source/pcd_saver.cpp)
+target_link_libraries(pcd_saver ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 

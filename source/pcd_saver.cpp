@@ -4,6 +4,7 @@
 
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/io/ply_io.h>
+#include <pcl/filters/voxel_grid.h>
 
 #include <sensor_msgs/PointCloud2.h>
 #include <pcl/point_cloud.h>
@@ -16,9 +17,10 @@
 #include <std_srvs/Empty.h>
 
 std::string save_folder;
+float map_res;
 ros::Publisher pub_;
 
-typedef pcl::PointCloud<pcl::PointXYZ> PointCloudT;
+typedef pcl::PCLPointCloud2 PointCloudT;
 
 PointCloudT::Ptr cloud_map = pcl::make_shared<PointCloudT>();
 
@@ -27,16 +29,15 @@ void callback(const sensor_msgs::PointCloud2::ConstPtr &pc)
 {
     ROS_INFO_ONCE("Got Scan!");
 
-    static PointCloudT::Ptr cloud_scan = pcl::make_shared<PointCloudT>();
-    pcl::fromROSMsg(*pc, *cloud_scan);
+    PointCloudT::Ptr pc2(new PointCloudT);
+    pcl_conversions::toPCL(*pc, *pc2);
 
-    *cloud_map += *cloud_scan;
+    pcl::VoxelGrid<PointCloudT> voxel;
+    voxel.setInputCloud(pc2);
+    voxel.setLeafSize(map_res, map_res, map_res);
+    voxel.filter(*pc2);
 
-    sensor_msgs::PointCloud2::Ptr cloud_map_msg = boost::make_shared<sensor_msgs::PointCloud2>();
-    pcl::toROSMsg(*cloud_map, *cloud_map_msg);
-    // cloud_map_msg->header.stamp = ros::Time::now();
-    cloud_map_msg->header.frame_id = "map";
-    pub_.publish(cloud_map_msg);
+    pcl::concatenate(*cloud_map, *pc2, *cloud_map);
 }
 
 bool save_cloud(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res)
@@ -52,13 +53,9 @@ bool save_cloud(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res)
     std::string str_time = std::to_string(time.sec);
     std::string str_pcd = str_path + str_time + ".pcd";
 
-    if(cloud_map->size())
-    pcl::io::savePCDFileBinary(str_pcd, *cloud_map); //Mais Eficiente ?
-    else
+    if (pcl::io::savePCDFile(str_pcd, *cloud_map) != 0)
     {
-        ROS_ERROR("No points to be saved.");
     }
-    
 
     ROS_INFO("Done!");
     return true;
@@ -67,8 +64,6 @@ bool save_cloud(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res)
 bool clear_cloud(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res)
 {
     ROS_INFO("Clearing cloud...");
-    cloud_map->clear();
-    ROS_INFO("Done!");
     return true;
 }
 
@@ -76,18 +71,21 @@ bool clear_cloud(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res)
 
 int main(int argc, char **argv)
 {
-    ros::init(argc, argv, "cloud_saver");
+    ros::init(argc, argv, "pcd_saver");
     ros::NodeHandle nh;
     ros::NodeHandle private_nh("~");
 
-    std::string input_cloud_node = nh.resolveName("cloud");
+    std::string input_cloud_node = nh.resolveName("velodyne_cloud_registered");
 
     ros::Subscriber cloud_sub = nh.subscribe(input_cloud_node, 1, callback);
 
-    if( !private_nh.getParam("save_folder",save_folder) ){
-        char* home_folder = getenv("HOME");
+    if (!private_nh.getParam("save_folder", save_folder))
+    {
+        char *home_folder = getenv("HOME");
         save_folder = home_folder;
     }
+
+    private_nh.param<float>("map_res", map_res, 0.1f);
 
     ros::ServiceServer save_service = private_nh.advertiseService("save", save_cloud);
 
@@ -95,6 +93,7 @@ int main(int argc, char **argv)
 
     pub_ = nh.advertise<sensor_msgs::PointCloud2>("map_cloud", 10);
 
+    ROS_WARN("Map Res: %f", map_res);
     ROS_WARN("Subbed Cloud topic -> %s", input_cloud_node.c_str());
     ROS_WARN("Save folder -> %s", save_folder.c_str());
 
